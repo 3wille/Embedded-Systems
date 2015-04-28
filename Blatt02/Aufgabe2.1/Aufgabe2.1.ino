@@ -3,6 +3,7 @@ int led_output = 13;
 int led_lower = 11;
 int led_higher = 9;
 int button_lower_count =0;
+int count = 0;
 
 void setup()
 {
@@ -36,19 +37,20 @@ void loop(){
 }
 void TC0_Handler()
 {
-    TC_GetStatus(TC0,1);
+  count++;
+    TC_GetStatus(TC0,0);
     //Serial.println("Timer");
     if(digitalRead(led_lower) == LOW)
     {
       button_lower_count++;
-      if(button_lower_count >=500) {
+      if(button_lower_count >= count/2) {
         brightness -= 10;
         if (brightness < 0)
         {
             brightness = 0;
         }
         analogWrite(led_output, brightness);
-        button_lower_count = 0;
+        //button_lower_count = 0;
       }
     }
     if(digitalRead(led_higher) == LOW)
@@ -60,4 +62,5 @@ void TC0_Handler()
         }
         analogWrite(led_output, brightness);
     }
+    
 }
