@@ -1,66 +1,61 @@
-int brightness = 0;
 int led_output = 13;
 int led_lower = 11;
 int led_higher = 9;
-int button_lower_count =0;
-int count = 0;
+
+volatile int button_lower_count = 0;
+volatile int button_higher_count = 0;
+volatile uint8_t brightness = 0;
 
 void setup()
 {
-    pinMode(led_output, OUTPUT);
-    pinMode(led_lower, INPUT);
-    pinMode(led_higher, INPUT);
+  pmc_set_writeprotect(false);
+  pmc_enable_periph_clk(ID_TC7);
 
+  pinMode(led_output, OUTPUT);
+  pinMode(led_lower, INPUT);
+  pinMode(led_higher, INPUT);
 
-    pmc_set_writeprotect(false);
-    pmc_enable_periph_clk(ID_TC0);
+  TC2->TC_CHANNEL[1].TC_RC = 12868;
+  TC_Configure(TC7, 0, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4);
+  TC2->TC_CHANNEL[1].TC_IER = TC_IER_CPCS;
+  TC2->TC_CHANNEL[1].TC_IDR = ~TC_IER_CPCS;
 
-    TC_Configure(TC0, 0, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4);
-    TC_SetRC(TC0,0,100);
-    
-    
+  NVIC_ClearPendingIRQ(TC7_IRQn);
+  NVIC_EnableIRQ(TC7_IRQn);
 
-    
-    Serial.begin(9600);
-    analogWrite(led_output, brightness);
+  TC_Start(TC2, 0);
+  Serial.begin(9600);
 
-    TC0->TC_CHANNEL[0].TC_IER=TC_IER_CPCS;
-    TC0->TC_CHANNEL[0].TC_IDR=~TC_IER_CPCS;
-    NVIC_ClearPendingIRQ(TC0_IRQn);
-    NVIC_EnableIRQ(TC0_IRQn);
-    TC_Start(TC0,0);
+  Serial.println("foobar");
 }
 
-void loop(){
+void loop() {
+  delay(100);
+  analogWrite(led_output, brightness);
   Serial.println(brightness);
-  delay(500);
 }
-void TC0_Handler()
+
+void TC6_Handler()
 {
-  count++;
-    TC_GetStatus(TC0,0);
-    //Serial.println("Timer");
-    if(digitalRead(led_lower) == LOW)
-    {
-      button_lower_count++;
-      if(button_lower_count >= count/2) {
-        brightness -= 10;
-        if (brightness < 0)
-        {
-            brightness = 0;
-        }
-        analogWrite(led_output, brightness);
-        //button_lower_count = 0;
-      }
+  uint32_t status;
+  status = TC2->TC_CHANNEL[0].TC_SR;
+
+  //Serial.println("Timer");
+  if (digitalRead(led_lower) == LOW)
+  {
+    ++button_lower_count;
+    if (button_lower_count >= 100) {
+      brightness -= 10;
+      button_lower_count = 0;
     }
-    if(digitalRead(led_higher) == LOW)
-    {
-        brightness += 10;
-        if (brightness > 255)
-        {
-            brightness = 255;
-        }
-        analogWrite(led_output, brightness);
+  }
+  if (digitalRead(led_higher) == LOW)
+  {
+    ++button_higher_count;
+    if (button_higher_count >= 100) {
+      brightness += 10;
+      button_higher_count = 0;
     }
-    
+  }
+
 }
