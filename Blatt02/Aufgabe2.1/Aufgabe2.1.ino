@@ -26,7 +26,7 @@ void setup()
   TC_Start(TC2, 0);
   Serial.begin(9600);
 
-  Serial.println("foobar");
+  Serial.println("Setup completed");
 }
 
 void loop() {

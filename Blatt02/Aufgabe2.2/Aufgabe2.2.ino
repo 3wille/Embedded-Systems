@@ -67,17 +67,19 @@ void TC7_Handler(void) {
       digitalWrite(pin_Motor_In1, LOW);
       digitalWrite(pin_Motor_In2, HIGH);
     }
-  } else if (mode == 2)
+  }
+  if (mode == 2)
   {
     //Serial.println("Mode3");
     PWM_Value += 1;
-    if (PWM_Value <= 255) {
+    if (PWM_Value >= 255) {
       PWM_Value = 255;
       mode = 3;
       digitalWrite(pin_Motor_In1, LOW);
       digitalWrite(pin_Motor_In2, HIGH);
     }
-  }else if (mode == 3)
+  }
+  if (mode == 3)
   {
     PWM_Value -= 1;
     if (PWM_Value <= 0) {
