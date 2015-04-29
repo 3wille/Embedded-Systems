@@ -9,19 +9,19 @@ volatile uint8_t brightness = 0;
 void setup()
 {
   pmc_set_writeprotect(false);
-  pmc_enable_periph_clk(ID_TC7);
+  pmc_enable_periph_clk(ID_TC6);
 
   pinMode(led_output, OUTPUT);
   pinMode(led_lower, INPUT);
   pinMode(led_higher, INPUT);
 
-  TC2->TC_CHANNEL[1].TC_RC = 12868;
-  TC_Configure(TC7, 0, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4);
-  TC2->TC_CHANNEL[1].TC_IER = TC_IER_CPCS;
-  TC2->TC_CHANNEL[1].TC_IDR = ~TC_IER_CPCS;
+  TC2->TC_CHANNEL[0].TC_RC = 2625;
+  TC_Configure(TC2, 0, TC_CMR_WAVE | TC_CMR_WAVSEL_UP_RC | TC_CMR_TCCLKS_TIMER_CLOCK4);
+  TC2->TC_CHANNEL[0].TC_IER = TC_IER_CPCS;
+  TC2->TC_CHANNEL[0].TC_IDR = ~TC_IER_CPCS;
 
-  NVIC_ClearPendingIRQ(TC7_IRQn);
-  NVIC_EnableIRQ(TC7_IRQn);
+  NVIC_ClearPendingIRQ(TC6_IRQn);
+  NVIC_EnableIRQ(TC6_IRQn);
 
   TC_Start(TC2, 0);
   Serial.begin(9600);
