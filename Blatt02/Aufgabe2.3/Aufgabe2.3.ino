@@ -79,7 +79,7 @@ void TC6_Handler()
   if (digitalRead(button_PWM) == LOW)
   {
     ++button_PWM_count;
-    if (button_PWM_count >= 100) {
+    if (button_PWM_count >= 30) {
       if(PWM_rising){
         PWM_Value += 10;
       }
@@ -99,15 +99,23 @@ void TC6_Handler()
       Serial.println("PWM");
     }
   }
+  else if(digitalRead(button_PWM) == HIGH){
+      button_PWM_count = 0;
+  }
   if (digitalRead(button_cycle) == LOW)
   {
     ++button_cycle_count;
-    if (button_cycle_count >= 100) {
+    if (button_cycle_count >= 30) {
       button_cycle_count = 0;
       ch_mode();
       Serial.println("Mode");
     }
   }
+  else if(digitalRead(button_cycle)==HIGH)
+  {
+    button_cycle_count = 0;
+  }
+  //Serial.println(button_cycle_count);
 
 }
 
