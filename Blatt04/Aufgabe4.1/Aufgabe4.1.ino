@@ -7,9 +7,6 @@ int button_count = 0;
 int brightness = 0;
 int rising = 1;
 
-char str[3];
-
-
 void setup(){
 	Serial.begin(9600);
 	Serial3.begin(4800);
