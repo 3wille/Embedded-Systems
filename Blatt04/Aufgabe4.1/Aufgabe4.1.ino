@@ -41,20 +41,7 @@ void setup(){
 
 	Serial.println("Setup complete");
 }
-/*
-void loop(){
-	if(master==1){
-		Serial3.write(brightness);
-	}else{
-    	if(Serial3.available()>0){
-    		
-		}
-		//Serial.println(str);
-		analogWrite(pin_led, brightness);
-	}
-	Serial.println(brightness);
-	delay(100);
-}*/
+
 void loop(){
 	if(Serial3.available()>0){
 	    if(master==1){
@@ -90,23 +77,6 @@ void TC6_Handler()
 		button_count = 0;
 	}
 }
-/*
-void pressed(){
-	if(rising == 1){
-		brightness += 10;
-	}else{
-		brightness -= 10;
-	}
-	if(brightness>=255){
-		brightness = 255;
-		rising = 0;
-	}
-	if(brightness<=0){
-		brightness = 0;
-		rising = 1;
-	}
-} */
-
 
 void sendOne(){
 	Serial3.write(1);
@@ -116,13 +86,13 @@ void slave_led_foo(){
 	//int i = 0;
 	for(int i=0;i<256;i++){
 		analogWrite(pin_led, i);
-		delay(50);
+		delay(10);
 		Serial.println(i);
 	}
 	sendOne();
 	for(int i=255;i>0;i--){
 	    analogWrite(pin_led, i);
-	    delay(50);
+	    delay(10);
 	    Serial.println(i);
 	}
 	sendOne();
