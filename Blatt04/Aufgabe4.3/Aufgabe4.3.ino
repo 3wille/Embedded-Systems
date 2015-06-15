@@ -59,7 +59,7 @@ void loop()
 
 void getGyroX(){
 	valueX = analogRead(pinX)*5000.0/1024.0;
-	vrefValue = analogRead(pinVref)*5000.0/2024.0;
+	vrefValue = analogRead(pinVref)*5000.0/1024.0;
 	float difference = vrefValue - valueX;
 	float rotationRate = difference/sensitivity;
 	rate = (int8_t) rotationRate;
