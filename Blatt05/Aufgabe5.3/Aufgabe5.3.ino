@@ -5,7 +5,7 @@ const int ledPin = 2; // LED
 const int resetPin = 5; // RST
 const int dcPin = 6; // D/C
 
-char alexFirst[ ] = "Alexander";
+String alexFirst = "Alexander";
 char alexLast[ ] = "Timmermann";
 char alexMat[ ] = "6524072";
 
@@ -150,6 +150,7 @@ void setup() {
   SPI.transfer(slavePin, 0x0c);
   digitalWrite(dcPin, HIGH);
   Serial.println("Setup done");
+  //names();
 }
 
 void sendCommand(unsigned int command){
@@ -200,10 +201,9 @@ void sendBuffer(){
 }
 
 int printChar(int x, int y, char value){
-  Serial.println(value);
   if(x >= 42 && x<=0 || y >= 78 && y<=0){//check bounds
     return -1;
-  }else if(x%6==0){
+  }else if(x%8==0){
     int ascii = value;
     int tablePosition = ascii - 32;
     for(int i=0;i<6;++i){
@@ -237,31 +237,55 @@ int printChar(int x, int y, char value){
 
 }
 
-void printStringCentered(int x, char* string){
+void printStringCentered(int x, String string){
   int y;
-  y = 84/2 - (sizeof(string)/2);
-  int temp = y;
-  for(int i=0;i<sizeof(string);++i){
-    printChar(x,y,string[i]);
-    temp += 6;
+  Serial.println(string);
+  Serial.print("Size: ");
+  Serial.println(string.length());
+  y = (84 - (string.length()*6)) / 2;
+  
+  for(int i=0;i<string.length();++i){
+    Serial.println(x);
+    Serial.println(y);
+    Serial.println(string[i]);
+    Serial.print("return: ");
+    Serial.print(printChar(x,y,string[i]));
+    Serial.print("\n");
+    y += 6;
   }
-  temp = y;
 }
 
 void loop() {
-  int x=0;
+  int x=8;
   printStringCentered(x, alexFirst);
-  ++x;
+  x+=8;
   printStringCentered(x, alexLast);
-  ++x;
+  x+=8;
   printStringCentered(x, alexMat);
+  printBuffer();
   delay(5000);
   
-  x=0;
+  clearDisplay();
+  x=8;
   printStringCentered(x, freddyFirst);
-  ++x;
+  x+=8;
   printStringCentered(x, freddyLast);
-  ++x;
+  x+=8;
   printStringCentered(x, freddyMat);
   delay(5000);
+
+}
+
+void clearDisplay(){
+  Serial.println("clearing");
+  for(int x=0;x<6;++x){
+    for(int y=0;y<84;++y){
+      buf[x][y] = 0;
+    }
+  }
+  sendBuffer();
+  Serial.println("cleared");
+}
+void names(){
+
 }
