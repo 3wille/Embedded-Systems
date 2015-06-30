@@ -173,7 +173,7 @@ void setPixel(int x, int y, bool value){
 
 void printBuffer(){
   for(int x=0;x<6;++x){
-    for(int y=0; y<84; y++){
+    for(int y=0; y<84; ++y){
       Serial.print(buf[x][y]);
     }
     Serial.print("\n");
@@ -190,6 +190,7 @@ void sendBuffer(){
 }
 
 int printChar(int x, int y, char value){
+  Serial.println(value);
   if(x >= 42 && x<=0 || y >= 78 && y<=0){//check bounds
     return -1;
   }else if(x%6==0){
@@ -198,6 +199,8 @@ int printChar(int x, int y, char value){
     for(int i=0;i<6;++i){
       buf[x/8][y+i]=font[tablePosition][i];
     }
+    sendBuffer();
+    return 0;
   }else{
     int ascii = value;
     int tablePosition = ascii - 32;
@@ -216,14 +219,19 @@ int printChar(int x, int y, char value){
       lowerMost = lowerMost << x % 8; //reset to actual positions
       uint8_t lowerLeast = block >> x % 8 ; //lower Block, less significant bits
       uint8_t lower = lowerLeast | lowerMost; //lower block
-      buf[x/8][y+i] = lower;
+      buf[x/8+1][y+i] = lower;
     }
+    sendBuffer();
+    return 1;
   }
-  sendBuffer();
+
 }
 
+
 void test(){
-  Serial.println(printChar(20,39,'@'));
+  Serial.println(printChar(20,39,'@'));//20,39
+  //Serial.println(printChar(0,0,'@'));
+  printBuffer() ;
 }
 
 void loop() {
