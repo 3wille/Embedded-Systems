@@ -36,7 +36,7 @@ void setup() {
   digitalWrite(dcPin, LOW);
   SPI.transfer(slavePin, 0x21);
   SPI.transfer(slavePin, 0x14);
-  SPI.transfer(slavePin, 0b10110000); //0xE0
+  SPI.transfer(slavePin, 0xE0); //0xE0
   SPI.transfer(slavePin, 0x20);
   SPI.transfer(slavePin, 0x0c);
   digitalWrite(dcPin, HIGH);
@@ -92,6 +92,7 @@ void sendBuffer(){
 
 void loop() {
   printBuffer();
+  delay(1000);
   for(int j=0; j<84; j++){
     Serial.print("j: ");
     Serial.print(j);
