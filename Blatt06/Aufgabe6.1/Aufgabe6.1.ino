@@ -147,29 +147,157 @@ void setup() {
   SPI.transfer(displayPin, 0x20);
   SPI.transfer(displayPin, 0x0c);
   digitalWrite(dcPin, HIGH);
+  
+  Serial.println(SD.begin(shieldPin));
   Serial.println("Setup done");
   
-  // Shield Setup
-  Serial.println(SD.begin(shieldPin));
-  if(SD.exists("/text1.txt")){
-    File text2 = SD.open("/text1.txt", FILE_READ);
-    Serial.println(text2.read());
-    text2.close();
-  }
-  
+  //int result = parseTextFile("/text2.txt");
+  //Serial.print("Result: ");
+  //Serial.println(result);
+  //printTextFile("text2.txt");
 }
 
+void sendCommand(unsigned int command){
+  digitalWrite(dcPin, LOW);
+  SPI.transfer(displayPin, command);
+}
 
+void sendData(uint8_t data){
+  digitalWrite(dcPin, HIGH);
+  SPI.transfer(displayPin, data);
+}
 
+void setPixel(int x, int y, int value){
+ // Serial.println("Set Pixel");
+  if(value==1){
+    buf[x/8][y] |= 1 << (x % 8);
+  }else{
+    buf[x/8][y] &= ~(1 << (x % 8));
+  }
+}
+/*
+void setPixel(int x, int y, bool value){
+  Serial.println("Set Pixel");
+  if(value){
+    buf[x/8][y] |= 1 << (x % 8);
+  }else{
+    buf[x/8][y] &= ~(1 << (x % 8));
+  }
+  //sendBuffer();
+}*/
+
+void printBuffer(){
+  for(int x=0;x<6;++x){
+    for(int y=0; y<84; ++y){
+      Serial.print(buf[x][y]);
+    }
+    Serial.print("\n");
+  }
+}
+
+void sendBuffer(){
+  for(int x=0;x<6;++x){
+    for(int y=0; y<84; y++){
+      sendData((uint8_t)buf[x][y]);
+    }
+  }
+  //Serial.println("Buffer");
+}
+
+int printChar(int x, int y, char value){
+  if(x >= 42 && x<=0 || y >= 78 && y<=0){//check bounds
+    return -1;
+  }else if(x%8==0){
+    int ascii = value;
+    int tablePosition = ascii - 32;
+    for(int i=0;i<6;++i){
+      buf[x/8][y+i]=font[tablePosition][i];
+    }
+    sendBuffer();
+    return 0;
+  }else{
+    int ascii = value;
+    int tablePosition = ascii - 32;
+    for(int i=0;i<6;++i){
+      uint8_t block = font[tablePosition][i];
+      
+      uint8_t upperLeast = buf[x/8][y+i]; //upper Block, less significant bits
+      upperLeast = upperLeast << x % 8; //set all bits but first x%8 to 0
+      upperLeast = upperLeast >> x % 8; //reset to actual positions
+      uint8_t upperMost = block << x % 8 ; //upper Block, more significant bits
+      uint8_t upper = upperLeast | upperMost; //upper block
+      buf[x/8][y+i] = upper;
+      
+      uint8_t lowerMost = buf[x/8+1][y+i]; //upper Block, more significant bits
+      lowerMost = lowerMost >> x % 8; //set all bits but last x%8 to 0
+      lowerMost = lowerMost << x % 8; //reset to actual positions
+      uint8_t lowerLeast = block >> x % 8 ; //lower Block, less significant bits
+      uint8_t lower = lowerLeast | lowerMost; //lower block
+      buf[x/8+1][y+i] = lower;
+    }
+    sendBuffer();
+    return 1;
+  }
+
+}
+
+void printStringCentered(int x, String string){
+  int y;
+  Serial.println(string);
+  Serial.print("Size: ");
+  Serial.println(string.length());
+  y = (84 - (string.length()*6)) / 2;
+  
+  for(int i=0;i<string.length();++i){
+    Serial.println(x);
+    Serial.println(y);
+    Serial.println(string[i]);
+    Serial.print("return: ");
+    Serial.print(printChar(x,y,string[i]));
+    Serial.print("\n");
+    y += 6;
+  }
+}
+
+void printString(int row, String string){
+  int y=0;
+  for(int i=0; i<string.length();++i){
+    printChar(row,y,string[i]);
+    y += 6;
+  }
+}
+
+void clearDisplay(){
+  //Serial.println("clearing");
+  for(int x=0;x<6;++x){
+    for(int y=0;y<84;++y){
+      buf[x][y] = 0;
+    }
+  }
+  sendBuffer();
+  //Serial.println("cleared");
+}
+/*
+void printTextFile(char* fileName){
+  int result = parseTextFile(fileName);
+  if(result == 0){
+    Serial.println("too many characters");
+  }
+}*/
+
+/*
 // max chars: 84
-String[] parseTextFile(String fileName){
+int parseTextFile(char* fileName){
+  clearDisplay();
+  Serial.println("parsing");
   if(!SD.exists(fileName)){
-    return;
+    Serial.println("not existing");
+    return  0;
   }
   File textFile = SD.open(fileName,FILE_READ);
   
   //initializers
-  String chars[84];
+  char chars[84];
   int charCount=0;
   String words[84];
   int wordCount=0;
@@ -177,32 +305,267 @@ String[] parseTextFile(String fileName){
   int rowCount=0;
   String currentWord;
   char currentChar;
+  bool newRow=true;
+  bool endOfFile = false;
   
   
-  while(textFile.available()){
+  while(textFile.available() && !endOfFile){
     currentChar = textFile.read();
     chars[charCount]=currentChar;
     
     if(currentChar == '\n'){
-      //END OF FILE
+      endOfFile = true;
+      return 1;
     }else if(currentChar == ' '){
       //END OF WORD
-      if(rows[rowCount].length()+currentWord.length()+1<=rowLength){//word fits into current row
-        rows[rowCount] += " " + currentWord;//append full word to row
+      if(rows[rowCount].length()+currentWord.length()+1<rowLength/6){//word fits into current row
+        if(newRow){
+          rows[rowCount] += currentWord;//append full word to new row
+          newRow = false;
+        }else{
+          rows[rowCount] += " " + currentWord;//append empty space and full word to row  
+        }
       }else{
+        //Serial.print("Row end: ");
+        //Serial.println(rowCount);
         ++rowCount;//move to next row
+        if(rowCount > 5){
+          return 0;
+        }
         rows[rowCount] = currentWord;//start new row with full word
+        //Serial.println(rows[rowCount]);
+        newRow = true;
       }
+      //Serial.println(currentWord);
       currentWord="";//reset current word
+      //Serial.println("end of word");
     }
     else{
+      //Serial.println(currentChar);
       currentWord += currentChar;//append char to current word
     }
     charCount++;
   }
+
   textFile.close();
+  
+  for(int i=0; i<charCount; ++i){
+    Serial.print(chars[i]);
+  }
+  for(int i=0; i<6;++i){
+    Serial.print("Row: ");
+    Serial.println(i);
+    Serial.println(rows[i]);
+  }
+  for(int i=0; i < 6;++i){
+    printString(i*8,rows[i]);
+  }
+  return 1;
+}*/
+
+void printTextFile(char* fileName){
+  clearDisplay();
+
+  if(!SD.exists(fileName)){
+    Serial.println("not existing");
+    return;
+  }
+  Serial.println("Printing text file");
+  File textFile = SD.open(fileName,FILE_READ);
+  
+  String text="";
+  String rows[6];
+  for(int  i=0; i<6;++i){
+    rows[i]="";
+  }
+  int currentRow=0;
+
+  Serial.println(textFile.available());
+  while(textFile.available()){
+    char currentChar = textFile.read();
+    if(currentRow>5){
+      Serial.println("too many characters");
+      printString(0, "too many characters");
+      return;
+    }
+    if(currentChar=='\n'){
+      Serial.println("EOF");
+      break;
+    }else{
+      //Serial.println(currentChar);
+      int currentLength = rows[currentRow].length();
+      //Serial.println(currentLength);
+      
+      if(currentLength>=13){
+        //Serial.print("bar ");
+        //Serial.println(currentChar);
+        //Serial.println(currentChar==' ');
+        if(currentChar==' '||rows[currentRow][12]==' '){
+          //Serial.println("fuck");
+          rows[currentRow]+=' ';
+          ++currentRow;
+        }else{
+          //Serial.println("foo");
+          rows[currentRow]+='-';
+          ++currentRow;
+          rows[currentRow]+=currentChar;
+        }
+      }else{
+        //Serial.println("foo");
+        rows[currentRow]+=currentChar;
+      }
+    }
+    //Serial.print("end of: ");
+    //Serial.println(currentChar);
+    //Serial.println("bla");
+  }
+
+  //Serial.println("test");
+  textFile.close();
+  for(int i=0; i<6;++i){
+    //Serial.print("Row: ");
+    //Serial.println(i);
+    //Serial.println(rows[i]);
+  }
+  //Serial.println("test1");
+  for(int i=0; i < 6;++i){
+    printString(i*8,rows[i]);
+  }
+}
+
+
+
+void printImageFile(char* fileName){
+  clearDisplay();  
+  if(!SD.exists(fileName)){
+    Serial.println("not existing");
+    return;
+  }
+  Serial.println("Printing image file");
+  File textFile = SD.open(fileName,FILE_READ);
+  
+  int xsize;
+  int ysize;
+  int mode=0;
+  String xs;
+  String ys;
+  
+  while(textFile.available()&&mode!=2){
+    char currentChar = textFile.read();
+    Serial.print(currentChar);
+    if(mode==0){
+      if(currentChar==','){
+        mode=1;
+      }else{
+        xs+=currentChar;
+      }
+    }else if(mode == 1){
+      if(currentChar=='\n'){
+        mode=2;
+      }else{
+        ys+=currentChar;
+      }
+    }
+  }
+  
+  xsize = xs.toInt();
+  ysize = ys.toInt();
+  Serial.print(xsize);
+  Serial.print(":");
+  Serial.println(ysize);
+  int bild[xsize][ysize];
+  int currentXPos=0;
+  int currentYPos=0;
+  while(textFile.available()){
+    char currentChar = textFile.read();
+    if(currentChar!=','){
+      //Serial.print(currentChar);
+      if(currentChar=='0'){
+        bild[currentXPos][currentYPos] = 0;
+      }else if(currentChar=='1'){
+        bild[currentXPos][currentYPos] = 1;  
+      }
+      
+      ++currentXPos;
+      if(currentXPos==xsize){
+        currentXPos = 0;
+        ++currentYPos;
+      }
+    }
+  }
+  
+  Serial.println("");
+  int xBorder = (84-xsize)/2;
+  int yBorder = (48-ysize)/2;
+  for(int i = 0; i<xsize;++i){
+    for(int j = 0; j<ysize;++j){
+      //Serial.print(bild[i][j]);
+      setPixel(yBorder+j,xBorder+i,bild[i][j]);
+      //setPixel(j,i,bild[i][j]);      
+    }
+
+  }
+  sendBuffer();
+}
+
+void getInput(){
+  String input="";
+  char currentChar='a';
+  while(Serial.available()>0 && currentChar!='\n'){
+    currentChar = Serial.read();
+    Serial.println(currentChar);
+    input+=currentChar;
+    //Serial.println(input);
+  }
+  
+  String command="";
+  String file="";
+  //Serial.println(input.length());
+  for(int i=0;i<input.length();++i){
+    if(input[i]==' '){
+      command = input.substring(0,i);
+      file = input.substring(i+1,input.length());
+    }
+  }
+  
+  Serial.println(command);
+  Serial.println(file);
+  char fileName[file.length()];
+  file.toCharArray(fileName, file.length());
+  Serial.println(fileName);
+  if(command == "exists" || command == "e"){
+    Serial.println("Command exists");
+    Serial.println(SD.exists(fileName));
+  }else if(command == "printText" || command == "pt"){
+    Serial.println("Command text");
+    printTextFile(fileName);
+  }else if(command == "printImage" || command == "pi"){
+    Serial.println("Command Image");
+    printImageFile(fileName);
+  }else{
+    Serial.println("unknown command");
+  }
+  while(Serial.available()>0){
+    Serial.println("kacke");
+    Serial.println(Serial.read());
+  }
 }
 
 void loop() {
-  
+  if(Serial.available()){
+    //Serial.println("call");
+    getInput();
+  }
+  /*
+  printImageFile("tams.img");
+  delay(1000);
+  printImageFile("smile1.img");
+  delay(1000);
+  printImageFile("smile2.img");
+  delay(1000);
+  printImageFile("smile3.img");
+  delay(1000);
+  printTextFile("text1.txt");
+  delay(1000);
+  printTextFile("text2.txt");*/
 }
